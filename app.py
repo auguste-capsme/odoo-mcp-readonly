@@ -18,8 +18,25 @@ models = xmlrpc.client.ServerProxy(f"{ODOO_URL}/xmlrpc/2/object")
 def health():
     return {"status": "running"}
 
-@app.get("/stock/{product_id}")
-def get_stock(product_id: int):
+@app.get("/stock/{template_id}")
+def get_stock(template_id: int):
+    # Trouver le product.product lié au template
+    product_variant = models.execute_kw(
+        ODOO_DB,
+        uid,
+        ODOO_API_KEY,
+        "product.product",
+        "search_read",
+        [[["product_tmpl_id", "=", template_id]]],
+        {"fields": ["id"]}
+    )
+
+    if not product_variant:
+        return {"error": "No variant found"}
+
+    product_id = product_variant[0]["id"]
+
+    # Récupérer les quants
     result = models.execute_kw(
         ODOO_DB,
         uid,
@@ -29,4 +46,5 @@ def get_stock(product_id: int):
         [[["product_id", "=", product_id]]],
         {"fields": ["location_id", "quantity"]}
     )
+
     return result
